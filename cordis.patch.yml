@@ -1,0 +1,30 @@
+# ============================================================================
+# whale-loli-kit —— DSH bundle patch（插件自带的挂载声明）
+# ============================================================================
+# 装上之后，profile 只要在 `dsh.profile.bundles` 里列出本包名即生效：
+#
+#   dsh plugin --profile web add whale-loli-kit
+#   （本地开发：dsh plugin --profile web add link:<本目录绝对路径>）
+#
+# 这个插件**不改任何模型路由、不碰任何会话**，只做三件事：
+#   1. 首次启动时把 assets/persona.md 装进 <DSH_HOME>/douyin-duty/（已存在就跳过）
+#   2. 起两个本地只读服务：生命状态 8781、记忆星图 8765（端口被占就跳过）
+#   3. 提供一个 /api/whale/status 给设置页/脚本查状态
+# ============================================================================
+
+- insert:
+    - id: whale-loli
+      name: whale-loli-kit
+      config:
+        enabled: true
+        # 🔴 默认**不自动起服务**（2026-11-23 实测踩到的坑）：
+        #    重启 DSH 时你自己的生命状态服务可能还没起来，插件抢先 bind 了 8781，
+        #    结果它用的是自己目录下的空 state.json —— 等于把你的"身体"换成了新的。
+        #    虽然那次它自己检测到端口被占退出了，但顺序反过来就真会抢。
+        #    ⇒ 想让它自己起服务，把 autoStart 改成 true（或者干脆手动跑 vitals.py）。
+        autoStart: false
+        # 想换端口就在你自己的 profile patch 里覆盖这两项
+        vitalsPort: 8781
+        brainvizPort: 8765
+        # 留空 = 用 PATH 里的 python
+        pythonPath: ""

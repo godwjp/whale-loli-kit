@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>记忆星图</title>
+<style>
+  :root{
+    --bg:#080b14; --panel:#0e1424; --line:#1d2942; --txt:#dbe4f5; --dim:#7d8ba6;
+    --accent:#5ac8fa; --warn:#ffb74d; --bad:#ef5350; --good:#66bb6a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);
+    font:13px/1.5 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  #app{display:flex;height:100%}
+  #stage{position:relative;flex:1;min-width:0}
+  canvas#sky{display:block;width:100%;height:100%}
+  #hud{position:absolute;left:18px;top:16px;pointer-events:none}
+  #hud h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.5px}
+  #hud .sub{color:var(--dim);font-size:11.5px;margin-top:3px}
+  #stats{display:flex;gap:18px;margin-top:10px}
+  #stats div{pointer-events:none}
+  #stats b{display:block;font-size:18px;font-weight:600;line-height:1.2}
+  #stats span{color:var(--dim);font-size:11px}
+  #tip{position:absolute;max-width:340px;padding:8px 10px;border-radius:8px;
+    background:rgba(10,16,30,.95);border:1px solid var(--line);color:var(--txt);
+    font-size:12px;display:none;pointer-events:none;z-index:5;white-space:pre-wrap}
+  #legend{position:absolute;left:18px;bottom:14px;color:var(--dim);font-size:11px}
+  #legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 5px 0 12px}
+  .srcbtn{padding:4px 12px;border-radius:7px;border:1px solid var(--line);background:#0e1424;
+    color:var(--dim);text-decoration:none;font-size:12px;line-height:1.6}
+  .srcbtn:hover{border-color:var(--accent);color:var(--txt)}
+  .srcbtn.on{background:rgba(90,200,250,.16);border-color:var(--accent);color:var(--txt);font-weight:600}
+
+  #panel{width:352px;flex:0 0 352px;background:var(--panel);border-left:1px solid var(--line);
+    overflow-y:auto;padding:14px 14px 40px}
+  .sec{margin-bottom:18px}
+  .sec h2{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--accent);
+    letter-spacing:.6px;text-transform:none}
+  .row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12px}
+  .row .nm{flex:0 0 128px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .bar{flex:1;height:6px;border-radius:3px;background:#18233a;overflow:hidden}
+  .row .bar i{display:block;height:100%;background:linear-gradient(90deg,#2f6fd0,#5ac8fa)}
+  .row .n{flex:0 0 26px;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums}
+  .row.clickable{cursor:pointer;border-radius:5px;padding:4px 5px;margin:2px -5px}
+  .row.clickable:hover{background:#16203a}
+  #forgetList .row .nm{flex:1;white-space:normal;line-height:1.35}
+  #forgetList .row .n{flex:0 0 38px}
+  canvas#decay{width:100%;height:170px;display:block}
+  .note{color:var(--dim);font-size:10.5px;line-height:1.5;margin-top:8px;
+    border-top:1px dashed var(--line);padding-top:8px}
+  #detail{display:none;background:#121a2e;border:1px solid var(--line);border-radius:8px;
+    padding:9px 10px;font-size:11.5px;line-height:1.55;color:#c7d3e8;max-height:150px;overflow:auto}
+  .tagline{color:var(--dim);font-size:11px;margin-top:6px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="sky"></canvas>
+    <div id="hud">
+      <h1>记忆星图<span id="srcTag" style="font-size:11px;color:var(--dim);font-weight:400;margin-left:8px"></span></h1>
+      <div class="sub" id="bankName">—</div>
+      <div id="srcSwitch" style="pointer-events:auto;display:flex;gap:6px;margin-top:9px">
+        <a class="srcbtn" data-src="hindsight" href="?src=hindsight">小婉</a>
+        <a class="srcbtn" data-src="xiaoyu" href="?src=xiaoyu">小瑜</a>
+      </div>
+      <div id="stats">
+        <div><b id="sTotal">0</b><span>条记忆</span></div>
+        <div><b id="sClarity">0</b><span>平均清晰度</span></div>
+        <div><b id="sProt">0</b><span>受保护</span></div>
+        <div><b id="sDrop">0</b><span>今日预计淡忘</span></div>
+      </div>
+    </div>
+    <div id="tip"></div>
+    <div id="legend">内圈新 · 外圈老</div>
+  </div>
+
+  <aside id="panel">
+    <div class="sec">
+      <h2>脑区 · 记忆住在哪</h2>
+      <div id="regions"></div>
+    </div>
+    <div class="sec">
+      <h2>遗忘曲线</h2>
+      <canvas id="decay" width="640" height="340"></canvas>
+      <div class="tagline" id="decayTag"></div>
+    </div>
+    <div class="sec">
+      <h2>记忆体温</h2>
+      <div id="temps"></div>
+    </div>
+    <div class="sec">
+      <h2>最该被想起</h2>
+      <div id="forgetList"></div>
+      <div id="detail"></div>
+    </div>
+    <div class="note" id="note"></div>
+  </aside>
+</div>
+
+<script>
+const REGION_COLORS = {
+  "脑干 · 世界之魂": "#ffd166",
+  "视交叉上核 · 静默节律": "#8e9bb5",
+  "前额叶 · 检索决策": "#64b5f6",
+  "海马体 · 编码索引": "#4dd0b1",
+  "杏仁核 · 情绪核心": "#ff7b8a",
+  "颞叶 · 人物": "#c792ea",
+  "顶叶 · 事实": "#7fd1e0",
+  "联合皮层 · 扩展联想": "#a3b1c6",
+};
+
+let DATA = null, stars = [], hovered = null, spin = 0;
+const sky = document.getElementById("sky");
+const ctx = sky.getContext("2d");
+const tip = document.getElementById("tip");
+
+function resize() {
+  const r = sky.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  sky.width = Math.max(1, r.width * dpr);
+  sky.height = Math.max(1, r.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener("resize", () => { resize(); });
+
+function ringRadius(days) { return 120 + Math.log1p(days * 24) * 60; }
+
+function buildStars() {
+  const w = sky.clientWidth, h = sky.clientHeight;
+  const cx = w / 2, cy = h / 2 + 10;
+  const maxR = Math.min(w, h) * 0.46;
+  const maxWorld = Math.max(...DATA.items.map(i => i.r), ringRadius(DATA.rings[DATA.rings.length - 1].days));
+  const k = maxR / maxWorld;
+  stars = DATA.items.map(it => ({
+    ...it,
+    x: cx + Math.cos(it.angle) * it.r * k,
+    y: cy + Math.sin(it.angle) * it.r * k * 0.66,
+    cx, cy, k,
+    color: REGION_COLORS[it.region] || "#a3b1c6",
+  }));
+}
+
+function draw() {
+  const w = sky.clientWidth, h = sky.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+  // 背景星尘
+  ctx.fillStyle = "#080b14";
+  ctx.fillRect(0, 0, w, h);
+
+  const cx = w / 2, cy = h / 2 + 10;
+  const maxR = Math.min(w, h) * 0.46;
+  const maxWorld = Math.max(...DATA.items.map(i => i.r),
+                            ringRadius(DATA.rings[DATA.rings.length - 1].days));
+  const k = maxR / maxWorld;
+
+  // 导引圈：自适应刻度（小时 / 天 / 周）
+  ctx.save();
+  DATA.rings.forEach((ring, idx) => {
+    const rr = ringRadius(ring.days) * k;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rr, rr * 0.66, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = idx === 0 ? "rgba(90,200,250,.18)" : "rgba(90,200,250,.075)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = "rgba(140,160,190,.45)";
+    ctx.font = "10px system-ui";
+    ctx.fillText(ring.label, cx + rr * 0.68, cy - rr * 0.66 * 0.68);
+  });
+  // 中心核
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 26);
+  g.addColorStop(0, "rgba(90,200,250,.30)");
+  g.addColorStop(1, "rgba(90,200,250,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, 26, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // 星点
+  for (const s of stars) {
+    const a = spin * 0.06;
+    const c = Math.cos(a), sn = Math.sin(a);
+    const dx = s.x - cx, dy = (s.y - cy) / 0.66;
+    const x = cx + dx * c - dy * sn;
+    const y = cy + (dx * sn + dy * c) * 0.66;
+    const cl = s.clarity;
+    const rad = 1.6 + 4.4 * cl;
+    const alpha = 0.16 + 0.84 * cl;
+    if (hovered && hovered.id === s.id) {
+      ctx.beginPath(); ctx.arc(x, y, rad + 6, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(90,200,250,.18)"; ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, rad, 0, Math.PI * 2);
+    ctx.fillStyle = s.color;
+    ctx.globalAlpha = alpha;
+    ctx.shadowBlur = 10 * cl;
+    ctx.shadowColor = s.color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    s._x = x; s._y = y; s._rad = rad;
+  }
+  spin += 1;
+  requestAnimationFrame(draw);
+}
+
+function esc(s) { return (s || "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+function pct(v) { return (v * 100).toFixed(0) + "%"; }
+
+function renderPanel() {
+  const d = DATA;
+  document.getElementById("bankName").textContent = d.bank + " · " + d.total + " 条 · " + d.edges + " 条关联";  document.getElementById("sTotal").textContent = d.total;
+  document.getElementById("sClarity").textContent = pct(d.avg_clarity);
+  document.getElementById("sProt").textContent = d.protected;
+  document.getElementById("sDrop").textContent = d.expected_drop_today.toFixed(2);
+
+  const maxCount = Math.max(1, ...d.regions.map(r => r.count));
+  document.getElementById("regions").innerHTML = d.regions.map(r => `
+    <div class="row" title="${esc(r.name)} · 平均清晰度 ${pct(r.avg_clarity)}">
+      <span class="nm" style="color:${REGION_COLORS[r.name] || "#a3b1c6"}">${esc(r.name)}</span>
+      <span class="bar"><i style="width:${(r.count / maxCount * 100).toFixed(1)}%"></i></span>
+      <span class="n">${r.count}</span>
+    </div>`).join("");
+
+  const maxT = Math.max(1, ...d.temps.map(t => t.count));
+  document.getElementById("temps").innerHTML = d.temps.map(t => `
+    <div class="row" title="平均清晰度 ${pct(t.avg_clarity)}">
+      <span class="nm">${esc(t.name)}</span>
+      <span class="bar"><i style="width:${(t.count / maxT * 100).toFixed(1)}%;
+        background:linear-gradient(90deg,#2f6fd0,#5ac8fa)"></i></span>
+      <span class="n">${t.count}</span>
+    </div>`).join("");
+
+  document.getElementById("forgetList").innerHTML = d.forgotten.map((f, i) => `
+    <div class="row clickable" data-id="${esc(f.id)}">
+      <span class="nm">${esc(f.short)}</span>
+      <span class="n" style="color:${f.clarity < 0.45 ? "#ef5350" : "#ffb74d"}">${pct(f.clarity)}</span>
+    </div>`).join("") || `<div class="tagline">没有快掉的记忆</div>`;
+
+  document.querySelectorAll("#forgetList .row").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = el.getAttribute("data-id");
+      const it = DATA.items.find(x => x.id === id);
+      hovered = it;
+      const box = document.getElementById("detail");
+      box.style.display = "block";
+      box.textContent = it.text;
+    });
+  });
+
+  document.getElementById("note").textContent =
+    (DATA.fresh_note ? DATA.fresh_note + "\n\n" : "") + DATA.model_note;
+  drawDecay();
+}
+
+function drawDecay() {
+  const cv = document.getElementById("decay");
+  const c = cv.getContext("2d");
+  const W = cv.width, H = cv.height;
+  const PADL = 46, PADR = 12, PADT = 12, PADB = 28;
+  // X 轴跟着数据走：数据只有几小时就按小时画，别把点全挤在左边
+  const days = Math.max(0.02, Math.min(90, DATA.max_age_days * 1.35));
+  const X = d => PADL + (Math.min(d, days) / days) * (W - PADL - PADR);
+  const Y = v => PADT + (1 - v) * (H - PADT - PADB);
+  const xLabel = d => d * 24 < 1 ? Math.round(d * 24 * 60) + "分"
+                      : d < 1 ? Math.round(d * 24) + "时" : Math.round(d) + "天";
+
+  c.clearRect(0, 0, W, H);
+  // 网格
+  c.strokeStyle = "rgba(255,255,255,.06)"; c.lineWidth = 1;
+  c.fillStyle = "rgba(150,165,190,.65)"; c.font = "11px system-ui";
+  for (const v of [0, .25, .5, .75, 1]) {
+    c.beginPath(); c.moveTo(PADL, Y(v)); c.lineTo(W - PADR, Y(v)); c.stroke();
+    c.fillText((v * 100).toFixed(0) + "%", 8, Y(v) + 4);
+  }
+  for (let i = 0; i <= 4; i++) {
+    const d = days * i / 4;
+    c.beginPath(); c.moveTo(X(d), PADT); c.lineTo(X(d), H - PADB); c.stroke();
+    c.fillText(xLabel(d), X(d) - 10, H - PADB + 16);
+  }
+  // 阈值线
+  const th = DATA.decay.thresholds;
+  [[th[0], "#66bb6a", "保护线 70%"], [th[1], "#ef5350", "清退线 45%"]].forEach(([v, col, label]) => {
+    c.save(); c.setLineDash([6, 5]); c.strokeStyle = col; c.globalAlpha = .8;
+    c.beginPath(); c.moveTo(PADL, Y(v)); c.lineTo(W - PADR, Y(v)); c.stroke();
+    c.restore();
+    c.fillStyle = col; c.font = "10px system-ui";
+    c.fillText(label, W - PADR - 78, Y(v) - 4);
+  });
+  // 参考曲线
+  const cols = ["#5c6b85", "#6aa9e0", "#ff8a9b", "#7fe0b0"];
+  DATA.decay.profiles.forEach((p, i) => {
+    c.strokeStyle = cols[i % cols.length]; c.lineWidth = 1.6; c.globalAlpha = .85;
+    c.beginPath();
+    let started = false;
+    p.points.forEach(([d, v]) => {
+      if (d > days * 1.001) return;
+      started ? c.lineTo(X(d), Y(v)) : (c.moveTo(X(d), Y(v)), started = true);
+    });
+    c.stroke(); c.globalAlpha = 1;
+  });
+  // 真实散点
+  for (const [age, cl, imp] of DATA.decay.scatter) {
+    c.beginPath(); c.arc(X(age), Y(cl), imp >= th[0] ? 3.4 : 2.4, 0, Math.PI * 2);
+    c.fillStyle = imp >= th[0] ? "rgba(102,187,106,.9)" : "rgba(90,200,250,.85)";
+    c.fill();
+  }
+  document.getElementById("decayTag").textContent = DATA.decay.profiles
+    .map(p => `${p.name}（稳定度 ${p.stability} 天）`).join(" · ");
+}
+
+sky.addEventListener("mousemove", e => {
+  const r = sky.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  let best = null, bd = 12;
+  for (const s of stars) {
+    if (s._x == null) continue;
+    const d = Math.hypot(s._x - mx, s._y - my);
+    if (d < bd) { bd = d; best = s; }
+  }
+  hovered = best;
+  if (best) {
+    tip.style.display = "block";
+    tip.style.left = Math.min(mx + 14, sky.clientWidth - 350) + "px";
+    tip.style.top = (my + 14) + "px";
+    tip.textContent = best.text + `\n\n${best.region} · 清晰度 ${pct(best.clarity)} · 强度 ${pct(best.imp)} · ${best.age_days.toFixed(1)} 天`;
+  } else {
+    tip.style.display = "none";
+  }
+});
+
+async function boot() {
+  resize();
+  // ⭐ 2026-11-20：带上 ?src= 才能切到小瑜的记忆（默认前台）
+  const _src = new URLSearchParams(location.search).get("src") || "hindsight";
+  // 高亮当前数据源按钮
+  document.querySelectorAll(".srcbtn").forEach((a) => {
+    const on = a.dataset.src === _src;
+    a.classList.toggle("on", on);
+    if (on) a.setAttribute("aria-current", "true");
+  });
+  const tag = document.getElementById("srcTag");
+  if (tag) tag.textContent = _src === "xiaoyu" ? "（小瑜的记忆）" : "（小婉的记忆）";
+  document.title = _src === "xiaoyu" ? "记忆星图 · 小瑜" : "记忆星图 · 小婉";
+  const res = await fetch("/api/data?src=" + encodeURIComponent(_src));
+  DATA = await res.json();
+  if (DATA.error) {
+    document.getElementById("regions").textContent = "读取失败：" + DATA.error;
+    return;
+  }
+  buildStars();
+  renderPanel();
+  requestAnimationFrame(draw);
+}
+window.addEventListener("resize", () => { resize(); if (DATA) buildStars(); });
+boot();
+</script>
+</body>
+</html>

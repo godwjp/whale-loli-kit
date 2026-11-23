@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>生命状态</title>
+<style>
+  :root{
+    --bg:#03060d; --panel:rgba(8,18,34,.62); --line:rgba(103,232,249,.16);
+    --cy:#67e8f9; --gr:#34d399; --rd:#fb7185; --or:#fb923c; --ye:#fbbf24;
+    --pu:#a78bfa; --tx:#e6f2ff; --dim:#7f93b8;
+    --w1:#2563EB; --w2:#3B82F6; --w3:#38BDF8; --drop:#7DD3FC;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(120% 80% at 80% 0%, #0a1830 0%, rgba(10,24,48,0) 55%),
+      radial-gradient(90% 70% at 10% 100%, #071426 0%, rgba(7,20,38,0) 60%),
+      var(--bg);
+    color:var(--tx);
+    font:13px/1.5 "Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    min-height:100vh; padding:18px;
+  }
+  .wrap{max-width:1560px;margin:0 auto;display:grid;grid-template-columns:342px 1fr;gap:16px}
+  @media(max-width:1080px){.wrap{grid-template-columns:1fr}}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;backdrop-filter:blur(8px);
+  }
+  h2{font-size:10px;letter-spacing:2px;color:var(--cy);text-transform:uppercase;
+     font-weight:600;margin-bottom:10px;opacity:.9}
+  .left{display:flex;flex-direction:column;gap:12px;position:sticky;top:18px;align-self:start}
+  .mood{
+    display:flex;align-items:center;gap:12px;
+  }
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--cy);box-shadow:0 0 12px var(--cy)}
+  .mood b{font-size:22px;letter-spacing:1px}
+  .mood small{display:block;color:var(--dim);font-size:11px;letter-spacing:1px;margin-top:2px}
+  .caps{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .cap{border:1px solid rgba(103,232,249,.3);color:var(--cy);border-radius:999px;
+       padding:2px 10px;font-size:11px;letter-spacing:1px}
+  .kv{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;
+      border-bottom:1px dashed rgba(127,147,184,.14)}
+  .kv:last-child{border-bottom:none}
+  .kv span{color:var(--dim)}
+  .kv b{font-family:Consolas,monospace;font-weight:500}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}.c12{grid-column:span 12}
+  @media(max-width:1180px){.c8,.c6,.c4{grid-column:span 12}}
+  canvas{display:block;width:100%}
+  .rowbar{display:flex;align-items:center;gap:10px;margin:5px 0}
+  .rowbar .nm{flex:0 0 96px;color:var(--dim);font-size:11.5px;letter-spacing:.5px}
+  .rowbar .track{flex:1;height:8px;border-radius:5px;background:rgba(127,147,184,.14);
+                 overflow:hidden;min-width:180px}
+  .rowbar .track i{display:block;height:100%;border-radius:5px;transition:width .55s ease}
+  .rowbar .vl{flex:0 0 44px;text-align:right;font-family:Consolas,monospace;font-size:11.5px;color:var(--tx)}
+  .tagline{color:var(--dim);font-size:11px;letter-spacing:.5px}
+  .flex2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:820px){.flex2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- 左栏 -->
+  <div class="left">
+    <div class="card">
+      <h2>角色</h2>
+      <div class="mood">
+        <div class="dot" id="moodDot"></div>
+        <div>
+          <b id="moodLevel">—</b>
+          <small id="moodSub">生命状态</small>
+        </div>
+      </div>
+      <div class="caps" id="caps"></div>
+    </div>
+
+    <div class="card">
+      <h2>遥测</h2>
+      <div class="kv"><span>精力</span><b id="kEnergy">—</b></div>
+      <div class="kv"><span>愉悦</span><b id="kValence">—</b></div>
+      <div class="kv"><span>黏人</span><b id="kCling">—</b></div>
+      <div class="kv"><span>易怒</span><b id="kIrr">—</b></div>
+      <div class="kv"><span>孤独</span><b id="kLone">—</b></div>
+      <div class="kv"><span>主动倾向</span><b id="kBias">—</b></div>
+    </div>
+
+    <div class="card">
+      <h2>核心读数</h2>
+      <div class="kv"><span>体温</span><b id="kTemp">—</b></div>
+      <div class="kv"><span>睡眠</span><b id="kSleep">—</b></div>
+      <div class="kv"><span>周期</span><b id="kCycle">—</b></div>
+      <div class="kv"><span>心跳</span><b id="kBeat">—</b></div>
+    </div>
+
+    <div class="card">
+      <h2>最近尝到</h2>
+      <div class="tagline" id="kTaste">—</div>
+    </div>
+  </div>
+
+  <!-- 右栏 -->
+  <div class="grid">
+    <div class="card c8">
+      <h2>近 3 分钟</h2>
+      <canvas id="cvTrend" height="150"></canvas>
+      <div class="tagline" style="margin-top:8px">
+        皮质醇 <i style="color:#fb7185">■</i>　多巴胺 <i style="color:#67e8f9">■</i>　
+        催产素 <i style="color:#a78bfa">■</i>　褪黑素 <i style="color:#64748b">■</i>　
+        饥饿 <i style="color:#fb923c">■</i>　口渴 <i style="color:#38BDF8">■</i>
+      </div>
+    </div>
+
+    <div class="card c4">
+      <h2>饥饿 / 口渴</h2>
+      <canvas id="cvRings" height="150"></canvas>
+      <div class="flex2" style="margin-top:6px">
+        <div class="tagline">饥饿 <b id="tHunger" style="color:#fb923c">—</b></div>
+        <div class="tagline">口渴 <b id="tThirst" style="color:#38BDF8">—</b></div>
+      </div>
+      <div class="tagline" id="kThirstNote" style="margin-top:6px;color:#7DD3FC"></div>
+    </div>
+
+    <div class="card c4" style="grid-column:span 4">
+      <h2>水罐</h2>
+      <canvas id="cvWater" height="170"></canvas>
+      <div class="tagline" style="margin-top:6px">水位 = 1 − 口渴（液体全蓝）</div>
+    </div>
+
+    <div class="card c4">
+      <h2>怒气 · 记仇</h2>
+      <canvas id="cvAnger" height="170"></canvas>
+      <div class="flex2" style="margin-top:6px">
+        <div class="tagline">怒气 <b id="tAnger" style="color:#fb7185">—</b></div>
+        <div class="tagline">记仇 <b id="tResent" style="color:#a78bfa">—</b></div>
+      </div>
+    </div>
+
+    <div class="card c4">
+      <h2>生理周期</h2>
+      <canvas id="cvCycle" height="170"></canvas>
+      <div class="tagline" style="margin-top:6px" id="tCycle">—</div>
+    </div>
+
+    <div class="card c6">
+      <h2>体内环境</h2>
+      <canvas id="cvInside" height="140"></canvas>
+      <div class="tagline" style="margin-top:8px">
+        睡眠压力 <i style="color:#a78bfa">■</i>　体温 <i style="color:#fb923c">■</i>　
+        免疫 <i style="color:#34d399">■</i>　疼痛 <i style="color:#fb7185">■</i>　
+        雌激素 <i style="color:#fbbf24">■</i>　孕激素 <i style="color:#c4b5fd">■</i>
+      </div>
+    </div>
+
+    <div class="card c6">
+      <h2>神经递质</h2>
+      <div id="barsNT"></div>
+    </div>
+
+    <div class="card c12">
+      <h2>神经-体液轴</h2>
+      <div class="flex2">
+        <div id="barsAxisA"></div>
+        <div id="barsAxisB"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const NAMES = {
+  dopamine:'多巴胺', oxytocin:'催产素', cortisol:'皮质醇', serotonin:'血清素',
+  noradrenaline:'去甲肾上腺素', acetylcholine:'乙酰胆碱', endorphin:'内啡肽',
+  vasopressin:'加压素', melatonin:'褪黑素', ghrelin:'胃饥饿素', leptin:'瘦素',
+  glucose:'血糖', insulin:'胰岛素', glucagon:'胰高血糖素', hunger:'饥饿', thirst:'口渴',
+  osmolality:'渗透压', blood_volume:'血容量', angiotensin:'血管紧张素', fluid_queue:'水队列',
+  adenosine:'睡眠压力', cytokines:'免疫', pain:'疼痛', estrogen:'雌激素', progesterone:'孕激素',
+  crh:'CRH', acth:'ACTH', adrenaline:'肾上腺素', fear:'害怕', worry:'担心', dread:'恐惧',
+};
+const COLORS = {
+  dopamine:'#67e8f9', oxytocin:'#a78bfa', cortisol:'#fb7185', serotonin:'#34d399',
+  noradrenaline:'#fb923c', acetylcholine:'#4ade80', endorphin:'#fbbf24',
+  vasopressin:'#c4b5fd', melatonin:'#64748b', ghrelin:'#fb923c', leptin:'#34d399',
+  glucose:'#fbbf24', insulin:'#67e8f9', glucagon:'#fb7185', hunger:'#fb923c', thirst:'#38BDF8',
+  osmolality:'#38BDF8', blood_volume:'#34d399', angiotensin:'#fb7185', fluid_queue:'#7DD3FC',
+  adenosine:'#a78bfa', cytokines:'#34d399', pain:'#fb7185', estrogen:'#fbbf24',
+  progesterone:'#c4b5fd', crh:'#fb7185', acth:'#fb923c', adrenaline:'#fb923c',
+};
+let S = null;
+const $ = id => document.getElementById(id);
+const pct = v => (v==null?'—':Math.round(v*100)+'%');
+const fx = (v,n=2) => (v==null?'—':Number(v).toFixed(n));
+
+function dpr(){ return Math.min(2, window.devicePixelRatio||1); }
+/**
+ * ⚠️ 这里踩过一个很坑的 bug：以前写
+ *     cv.height = Math.round(Number(cv.getAttribute('height'))*d)
+ *   —— `cv.height = x` 会**同时把 height 属性改掉**，于是下一帧读到的是 150·d，
+ *   第三帧 150·d²…… 每帧都在放大画布。dpr=1 的无头环境看不出来，
+ *   但系统缩放 125%/150% 的机器跑几十帧后画布涨到几万像素，整页错位、看上去一片空白。
+ *   现在把设计高度记在 data-h 上，只读一次，并且用 style.height 钉住布局高度。
+ */
+function fit(cv){
+  if(!cv.dataset.h) cv.dataset.h = String(Number(cv.getAttribute('height')) || 150);
+  const H0 = Number(cv.dataset.h);
+  const r = cv.getBoundingClientRect();
+  const d = dpr();
+  cv.style.height = H0 + 'px';
+  cv.width  = Math.max(1, Math.round(r.width * d));
+  cv.height = Math.max(1, Math.round(H0 * d));
+  const c = cv.getContext('2d');
+  c.setTransform(d,0,0,d,0,0);
+  return { c, w: r.width || cv.width/d, h: H0 };
+}
+
+function bar(name, v, color){
+  const p = Math.max(0, Math.min(1, v||0));
+  return `<div class="rowbar">
+    <span class="nm">${name}</span>
+    <span class="track"><i style="width:${(p*100).toFixed(1)}%;background:${color||'#67e8f9'}"></i></span>
+    <span class="vl">${Math.round(p*100)}</span>
+  </div>`;
+}
+
+function drawTrend(){
+  const {c,w,h} = fit($('cvTrend'));
+  c.clearRect(0,0,w,h);
+  c.strokeStyle='rgba(127,147,184,.12)'; c.lineWidth=1;
+  for(let i=0;i<=4;i++){ const y=h*i/4; c.beginPath(); c.moveTo(0,y); c.lineTo(w,y); c.stroke(); }
+  const hist = (S.history||[]).slice(-72);
+  if(hist.length<2){ c.fillStyle='#7f93b8'; c.font='12px system-ui'; c.fillText('采样中…',8,18); return; }
+  const idx = {cortisol:1,dopamine:2,oxytocin:3,melatonin:4,hunger:5,thirst:6};
+  const cols = {cortisol:'#fb7185',dopamine:'#67e8f9',oxytocin:'#a78bfa',melatonin:'#64748b',hunger:'#fb923c',thirst:'#38BDF8'};
+  for(const k in idx){
+    const i = idx[k];
+    c.beginPath(); c.strokeStyle=cols[k]; c.lineWidth=1.6; c.globalAlpha=.92;
+    hist.forEach((p,j)=>{
+      const x = w*j/(hist.length-1);
+      const y = h - Math.max(0,Math.min(1,p[i]||0))*(h-6) - 3;
+      j?c.lineTo(x,y):c.moveTo(x,y);
+    });
+    c.stroke();
+    // 末端光点
+    const last = hist[hist.length-1];
+    const x = w, y = h - Math.max(0,Math.min(1,last[i]||0))*(h-6) - 3;
+    c.beginPath(); c.arc(x-1,y,2.4,0,7); c.fillStyle=cols[k]; c.fill();
+  }
+  c.globalAlpha=1;
+}
+
+function drawRings(){
+  const {c,w,h} = fit($('cvRings'));
+  c.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2, R=Math.min(w,h)/2-10;
+  const ring=(r,val,col,label)=>{
+    c.beginPath(); c.arc(cx,cy,r,0,7); c.strokeStyle='rgba(127,147,184,.16)'; c.lineWidth=10; c.stroke();
+    c.beginPath(); c.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.max(0,Math.min(1,val)));
+    c.strokeStyle=col; c.lineWidth=10; c.lineCap='round'; c.stroke();
+    c.fillStyle='#7f93b8'; c.font='10px system-ui'; c.fillText(label, cx-r*0.7, cy+r+2);
+  };
+  ring(R-6, S.hunger, '#fb923c', '饥饿');
+  ring(R-28, S.thirst, '#38BDF8', '口渴');
+  c.beginPath(); c.setLineDash([2,4]); c.arc(cx,cy,R+2,0,7);
+  c.strokeStyle='rgba(103,232,249,.22)'; c.lineWidth=1; c.stroke(); c.setLineDash([]);
+}
+
+// 水罐：液体全蓝（v2），水位 = 1 − thirst
+function drawWater(){
+  const {c,w,h} = fit($('cvWater'));
+  c.clearRect(0,0,w,h);
+  const bw=Math.min(110,w*0.42), bh=h-24, bx=(w-bw)/2, by=12;
+  // 罐体
+  c.beginPath(); c.roundRect(bx,by,bw,bh,14);
+  c.fillStyle='rgba(6,16,30,.8)'; c.fill();
+  c.strokeStyle='rgba(103,232,249,.35)'; c.lineWidth=1.4; c.stroke();
+
+  const level = Math.max(0,Math.min(1, 1-(S.thirst||0)));
+  const col = level<0.25?[37,99,235]:level<0.50?[59,130,246]:[56,189,248];
+  const lh = bh*level;
+  const top = by+bh-lh;
+  c.save();
+  c.beginPath(); c.roundRect(bx+2,by+2,bw-4,bh-4,12); c.clip();
+  // 水面正弦
+  const t = performance.now()/900;
+  c.beginPath();
+  c.moveTo(bx, top);
+  for(let x=0;x<=bw;x+=4){
+    const y = top + Math.sin(x/26+t)*2.4 + Math.sin(x/11-t*1.3)*1.2;
+    c.lineTo(bx+x, y);
+  }
+  c.lineTo(bx+bw, by+bh); c.lineTo(bx, by+bh); c.closePath();
+  c.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},.78)`; c.fill();
+  // 水面高光
+  c.strokeStyle='rgba(186,230,253,.55)'; c.lineWidth=1.4; c.stroke();
+  // 气泡：越渴越多
+  const n = Math.round(6 + 18*(S.thirst||0));
+  for(let i=0;i<n;i++){
+    const bx2 = bx+6+((i*37)%(bw-12));
+    const by2 = top + ((performance.now()/18 + i*53) % Math.max(6,lh));
+    c.beginPath(); c.arc(bx2, by2, 1.2+((i%3)*0.6), 0, 7);
+    c.fillStyle='rgba(186,230,253,.45)'; c.fill();
+  }
+  c.restore();
+  // 刻度
+  c.fillStyle='#7f93b8'; c.font='10px Consolas';
+  c.fillText(Math.round(level*100)+'%', bx+bw/2-12, by-2);
+}
+
+function drawAnger(){
+  const {c,w,h} = fit($('cvAnger'));
+  c.clearRect(0,0,w,h);
+  const ang = Math.max(0,Math.min(1,S.anger||0));
+  const res = Math.max(0,Math.min(1,S.resentment||0));
+  const baseY = h-8, cx = w/2;
+  // 余烬（记仇）
+  c.beginPath(); c.ellipse(cx, baseY, 46+40*res, 7+5*res, 0,0,7);
+  c.fillStyle=`rgba(167,139,250,${0.10+0.35*res})`; c.fill();
+  // 主火舌
+  const t = performance.now()/220;
+  const height = 8 + 130*ang;
+  for(let k=0;k<3;k++){
+    const off = (k-1)*16;
+    const hh = height*(0.72+0.14*k);
+    c.beginPath();
+    c.moveTo(cx+off-10, baseY);
+    c.bezierCurveTo(cx+off-16+Math.sin(t+k)*5, baseY-hh*0.45,
+                    cx+off+12+Math.cos(t+k)*6, baseY-hh*0.7,
+                    cx+off+Math.sin(t*0.7+k)*3, baseY-hh);
+    c.bezierCurveTo(cx+off+18+Math.cos(t+k)*5, baseY-hh*0.6,
+                    cx+off+14, baseY-hh*0.35, cx+off+10, baseY);
+    c.closePath();
+    const g = c.createLinearGradient(0,baseY,0,baseY-hh);
+    g.addColorStop(0,`rgba(251,113,133,${0.20+0.35*ang})`);
+    g.addColorStop(0.55,`rgba(251,146,60,${0.18+0.40*ang})`);
+    g.addColorStop(1,'rgba(251,191,36,0)');
+    c.fillStyle=g;
+    c.globalAlpha = ang>0.02 ? 1 : 0.18;
+    c.fill();
+    c.globalAlpha=1;
+  }
+  // 火星
+  if(ang>0.15){
+    for(let i=0;i<10;i++){
+      const yy = baseY - ((performance.now()/7 + i*61) % (height+20));
+      const xx = cx + Math.sin((performance.now()/700)+i)*26;
+      c.beginPath(); c.arc(xx,yy,1.1,0,7);
+      c.fillStyle=`rgba(251,191,36,${0.5*ang})`; c.fill();
+    }
+  }
+  // 记仇结冰棱
+  if(res>0.3){
+    c.strokeStyle=`rgba(103,232,249,${0.25+0.5*res})`; c.lineWidth=1.2;
+    for(let i=0;i<5;i++){
+      const x=cx-40+i*20;
+      c.beginPath(); c.moveTo(x,baseY-4); c.lineTo(x+3,baseY-14-8*res); c.stroke();
+    }
+  }
+  // 平静态：怒气≈0 时别留一张空卡片，画一撮余温 + 明确写"平静"
+  if(ang < 0.02){
+    c.beginPath(); c.ellipse(cx, baseY, 34, 5, 0, 0, 7);
+    c.fillStyle='rgba(251,146,60,.16)'; c.fill();
+    c.fillStyle='#7f93b8'; c.font='12px system-ui'; c.textAlign='center';
+    c.fillText('平静 · 没有火', cx, baseY-22);
+    c.font='10px Consolas'; c.fillStyle='rgba(127,147,184,.7)';
+    c.fillText('怒气 0 · 记仇 ' + Math.round(res*100) + '%', cx, baseY-6);
+    c.textAlign='left';
+  }
+}
+
+function drawCycle(){
+  const {c,w,h} = fit($('cvCycle'));
+  c.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2+2, R=Math.min(w,h)/2-16;
+  const n = Math.max(28, Math.min(31, S.cycle_len||30));
+  const day = S.cycle_day||0;
+  const segs = [
+    [1,5,'#fb7185'],[6,12,'#34d399'],[13,15,'#a78bfa'],[16,23,'#fbbf24'],[24,n,'#94a3b8']
+  ];
+  for(const [a,b,col] of segs){
+    c.beginPath();
+    c.arc(cx,cy,R, -Math.PI/2 + 2*Math.PI*(a-1)/n, -Math.PI/2 + 2*Math.PI*b/n);
+    c.strokeStyle=col; c.lineWidth=7; c.lineCap='butt'; c.stroke();
+  }
+  // 指针
+  if(day>0){
+    const ang = -Math.PI/2 + 2*Math.PI*(day-1)/n;
+    c.beginPath(); c.moveTo(cx,cy);
+    c.lineTo(cx+Math.cos(ang)*(R-2), cy+Math.sin(ang)*(R-2));
+    c.strokeStyle='#e6f2ff'; c.lineWidth=1.6; c.stroke();
+    c.beginPath(); c.arc(cx,cy,3,0,7); c.fillStyle='#67e8f9'; c.fill();
+  }
+  // 经期脉动点
+  for(let d=1; d<=5; d++){
+    const ang = -Math.PI/2 + 2*Math.PI*(d-1)/n;
+    const pulse = 1.4 + 0.9*Math.abs(Math.sin(performance.now()/520 + d));
+    c.beginPath();
+    c.arc(cx+Math.cos(ang)*(R+8), cy+Math.sin(ang)*(R+8), pulse, 0, 7);
+    c.fillStyle='rgba(251,113,133,.85)'; c.fill();
+  }
+  c.fillStyle='#e6f2ff'; c.font='bold 13px system-ui'; c.textAlign='center';
+  c.fillText(PHASE_CN[S.cycle_phase]||'—', cx, cy-2);
+  c.font='11px Consolas'; c.fillStyle='#7f93b8';
+  c.fillText('D'+(day||0)+'/'+n, cx, cy+14);
+  c.textAlign='left';
+}
+const PHASE_CN = {menstrual:'经期',follicular:'卵泡期',ovulation:'排卵期',luteal:'黄体期',premenstrual:'经前期'};
+
+function drawInside(){
+  const {c,w,h} = fit($('cvInside'));
+  c.clearRect(0,0,w,h);
+  const hist=(S.history||[]).slice(-72);
+  if(hist.length<2){ c.fillStyle='#7f93b8'; c.font='12px system-ui'; c.fillText('采样中…',8,18); return; }
+  const series=[
+    {i:7,col:'#a78bfa',f:v=>v},                       // 腺苷
+    {i:8,col:'#fb923c',f:v=>(v-36.0)/3.0},            // 体温归一
+    {i:9,col:'#34d399',f:v=>v},                       // 免疫
+    {i:10,col:'#fb7185',f:v=>v},                      // 疼痛
+    {i:11,col:'#fbbf24',f:v=>v},                      // 雌激素
+    {i:12,col:'#c4b5fd',f:v=>v},                      // 孕激素
+  ];
+  for(const s of series){
+    c.beginPath(); c.strokeStyle=s.col; c.lineWidth=1.4; c.globalAlpha=.9;
+    hist.forEach((p,j)=>{
+      const x=w*j/(hist.length-1);
+      const v=Math.max(0,Math.min(1,s.f(p[s.i])));
+      const y=h-4-v*(h-8);
+      j?c.lineTo(x,y):c.moveTo(x,y);
+    });
+    c.stroke();
+  }
+  c.globalAlpha=1;
+}
+
+function render(){
+  if(!S) return;
+  $('moodLevel').textContent = S.emotion_level || '平静';
+  $('moodSub').textContent = 'PAD 愉悦 '+(S.valence>=0?'+':'')+fx(S.valence)+' / 唤醒 '+fx(S.energy)+' / 掌控 '+fx(S.dominance);
+  $('caps').innerHTML = (S.emotion_candidates||[]).map(t=>`<span class="cap">${t}</span>`).join('')
+    || '<span class="cap">平静</span>';
+  $('kEnergy').textContent=pct(S.energy);
+  $('kValence').textContent=fx(S.valence);
+  $('kCling').textContent=pct(S.clinginess);
+  $('kIrr').textContent=pct(S.irritability);
+  $('kLone').textContent=pct(S.loneliness);
+  $('kBias').textContent=fx(S.proactive_bias,2);
+  $('kTemp').textContent=fx(S.core_temp,2)+' ℃';
+  $('kSleep').textContent = S.asleep ? (S.sleep_kind==='nap'?'午睡中':'睡眠中') : '清醒';
+  $('kCycle').textContent = (PHASE_CN[S.cycle_phase]||'—')+' D'+(S.cycle_day||0)+'/'+(S.cycle_len||0);
+  const age = S.last_update ? Math.max(0, Math.round(Date.now()/1000 - S.last_update)) : null;
+  $('kBeat').textContent = age==null?'—':(age+'s 前');
+  const lt = S.last_taste && S.last_taste.name ? `${S.last_taste.name} · ${S.last_taste.feel||''}` : '—';
+  $('kTaste').textContent = lt;
+  $('tHunger').textContent=pct(S.hunger);
+  $('tThirst').textContent=pct(S.thirst);
+  $('tAnger').textContent=pct(S.anger);
+  $('tResent').textContent=pct(S.resentment);
+  $('tCycle').textContent = (PHASE_CN[S.cycle_phase]||'—')+' · D'+(S.cycle_day||0)+' · 雌激素 '+pct(S.estrogen)+' / 孕激素 '+pct(S.progesterone);
+
+  // 口渴四档提示（面板与提示词同源）
+  const th=S.thirst||0;
+  $('kThirstNote').textContent =
+      th>0.82?'你渴得厉害，嗓子发干':th>0.62?'有点渴，想喝点凉的'
+    : th>0.45?'嗓子有点干，想喝口水':th>0.30?'嘴里有点干，不严重'
+    : th<0.25?'刚喝过水，嘴里还润着':'中性';
+
+  $('barsNT').innerHTML = ['dopamine','oxytocin','cortisol','serotonin','noradrenaline']
+    .map(k=>bar(NAMES[k], S[k], COLORS[k])).join('');
+  $('barsAxisA').innerHTML = ['adrenaline','acetylcholine','endorphin','vasopressin','melatonin','hunger']
+    .map(k=>bar(NAMES[k], S[k], COLORS[k])).join('');
+  $('barsAxisB').innerHTML = ['thirst','osmolality','blood_volume','angiotensin','adenosine','glucose']
+    .map(k=>bar(NAMES[k], S[k], COLORS[k])).join('');
+}
+
+function drawAll(){
+  drawTrend(); drawRings(); drawWater(); drawAnger(); drawCycle(); drawInside();
+}
+/**
+ * ⚠️ 以前只用 requestAnimationFrame 递归驱动绘制，结果：
+ *   浏览器在**后台标签页 / 最小化窗口**里会暂停 rAF，画布永远是空的 ——
+ *   人一点开就以为"好多块没显示"。现在改成定时器驱动（15fps），
+ *   并且拿到数据后立刻画一次，不依赖 rAF 是否被调度。
+ */
+function frame(){ drawAll(); }
+
+async function poll(){
+  try{
+    const r = await fetch('/api/state', {cache:'no-store'});
+    S = await r.json();
+    render();
+    drawAll();           // 立刻画一次，别等定时器
+  }catch(e){ /* 服务没起 */ }
+}
+
+// 先起绘制循环（不等数据），再拉数据
+setInterval(frame, 66);
+poll(); setInterval(poll, 3000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden && S){ render(); drawAll(); } });
+window.addEventListener('resize', () => { if(S){ render(); drawAll(); } });
+</script>
+</body>
+</html>

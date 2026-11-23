@@ -1,0 +1,36 @@
+{
+  "name": "whale-loli-kit",
+  "version": "0.1.0",
+  "description": "给 DSH 装一个「有身体、有记忆、会自己写日记」的抖音角色：人设 + 生命状态 + 记忆星图。刷抖音部分依赖 dsh-douyin-scroll。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "persona",
+    "vitals",
+    "brainviz"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "dsh": ">=0.1.7-rc.1",
+    "node": ">=22"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "assets",
+    "说明书.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "node selfcheck.mjs"
+  }
+}

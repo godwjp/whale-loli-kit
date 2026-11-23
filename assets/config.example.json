@@ -1,0 +1,62 @@
+{
+  "_说明": "复制成 config.json 再改。⚠️ 这个文件里会存你自己的抖音昵称/sec_uid，改完别提交进仓库（.gitignore 已经挡住）。",
+
+  "perDay": 50,
+  "manualPerRun": 10,
+  "autoEnabled": true,
+  "maxPerRun": 12,
+  "peakValley": false,
+  "noon": true,
+  "night": true,
+  "scheduleDays": [],
+  "windows": [],
+
+  "keywords": ["恋爱", "deepseek", "情侣", "大肥鱼", "gpt", "claude", "游戏"],
+  "channels": [],
+  "authors": [],
+  "minDescLen": 12,
+  "minComments": 3,
+
+  "autoComment": false,
+  "autoSend": false,
+  "commentAtMe": true,
+  "commentExecutor": "builtin",
+  "commentPerRun": 0,
+  "commentPerDay": 0,
+
+  "atPeers": [],
+  "commentSelfName": "",
+  "mentionName": "",
+  "httpCommentUrl": "",
+
+  "lurkGroups": [],
+  "lurkDigestHour": 0,
+
+  "notifyMode": "toast",
+  "webhookUrl": "",
+  "webhookPreset": "custom",
+  "updateUrl": "",
+
+  "dmTo": "",
+  "dmToId": "",
+  "dmPeers": [
+    {
+      "nick": "在这里填你自己的抖音昵称",
+      "sec_uid": ""
+    }
+  ],
+
+  "chatWatch": true,
+  "chatWatchSec": 10,
+  "chatWatchTarget": "duty",
+  "petLinkTo": true,
+  "reportLevel": "full",
+
+  "pythonPath": "",
+  "dshBin": "",
+  "headlessProfile": "headless",
+  "headlessRoute": "",
+  "dutyRoute": "",
+  "roundPermission": "",
+  "overlayMcp": true
+}
