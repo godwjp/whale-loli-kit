@@ -1,0 +1,57 @@
+# 登录凭证
+douyin_cookie.txt
+dukou.json
+dukou-cursor.json
+*.cookie
+*cookie*.txt
+
+# 私人数据
+config.json
+account.json
+memory/
+diary/
+diary-backup/
+out/
+chrome-profile/
+runs/
+comment-sends/
+notice.json
+recommendations.json
+forward-pick.json
+round-evidence.json
+chat-watch*.json
+chat-watch.log
+duty.log
+dukou.log
+seen.md
+creators.json
+persona.md.bak-*
+
+# 运行时状态
+assets/vitals/state.json
+assets/vitals/state.json.bak
+assets/vitals/vitals.log
+assets/brainviz/*.log
+python-path.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 本地临时
+*.tmp
+*.log
